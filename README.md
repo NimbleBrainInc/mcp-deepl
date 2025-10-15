@@ -1,31 +1,78 @@
-# DeepL MCP Server
+# MCP Server DeepL
 
-MCP server for DeepL Translation API. Professional-grade translation for 30+ languages with superior quality, document translation support, custom glossaries, and formality control.
+Production-ready MCP server for DeepL Translation API with comprehensive tooling, type safety, and enterprise-grade architecture.
 
 ## Features
 
+- **Official Client**: Built on the official `deepl-python` library for reliability
+- **Full API Coverage**: Complete implementation of DeepL API (translation, glossaries, usage tracking)
+- **Strongly Typed**: All responses use Pydantic models for type safety
+- **Dual Transport**: Supports both stdio and HTTP (streamable-http) modes
+- **Async/Await**: Async wrapper for seamless MCP integration
+- **Type Safe**: Full mypy strict mode compliance
+- **Production Ready**: Docker support, comprehensive tests, CI/CD pipeline
+- **Developer Friendly**: Makefile commands, auto-formatting, fast feedback
 - **High-Quality Translation**: Superior to Google Translate in quality
 - **30+ Languages**: European and Asian languages
 - **Document Translation**: PDF, DOCX, PPTX, XLSX, HTML, TXT
 - **Custom Glossaries**: Consistent terminology across translations
 - **Formality Control**: Formal/informal tone for supported languages
-- **Context-Aware**: Nuanced, natural translations
-- **Tag Handling**: Preserve XML/HTML markup
-- **Batch Translation**: Translate multiple texts in one request
-- **Usage Tracking**: Monitor character consumption
 
-## Setup
+## Architecture
 
-### Prerequisites
+This server follows S-Tier MCP Server Architecture:
 
-- DeepL account (free or Pro)
-- API key
+```
+src/mcp_deepl/
+├── __init__.py         # Package initialization
+├── server.py           # FastMCP server with tool definitions
+├── api_client.py       # Async wrapper around official DeepL Python client
+└── api_models.py       # Pydantic models for type safety
 
-### Environment Variables
+tests/                  # Unit tests with pytest + AsyncMock
+e2e/                    # End-to-end Docker integration tests
+```
 
-- `DEEPL_API_KEY` (required): Your DeepL API key
+**Key Implementation Details:**
+- Uses the official `deepl-python` library for reliable API communication
+- Wraps the official client with async methods for MCP compatibility
+- Maintains full type safety with Pydantic models
+- Supports all DeepL API features including glossaries and document translation
+
+## Installation
+
+### Using uv (recommended)
+
+```bash
+# Install package
+uv pip install -e .
+
+# Install with dev dependencies
+uv pip install -e . --group dev
+```
+
+### Traditional pip
+
+```bash
+pip install -e .
+```
+
+## Configuration
+
+1. Copy the example environment file:
+
+```bash
+cp .env.example .env
+```
+
+2. Edit `.env` and add your DeepL API key:
+
+```bash
+DEEPL_API_KEY=your_api_key_here
+```
 
 **How to get credentials:**
+
 1. Go to [deepl.com/pro-api](https://www.deepl.com/pro-api)
 2. Sign up for an account (Free or Pro)
 3. Go to Account Settings
@@ -33,17 +80,250 @@ MCP server for DeepL Translation API. Professional-grade translation for 30+ lan
 5. Copy the key and store as `DEEPL_API_KEY`
 
 **API Key Format:**
+
 - Free tier keys end with `:fx` (e.g., `abc123:fx`)
 - Pro keys do not have the `:fx` suffix
 - The server automatically detects which endpoint to use
 
+The `.env` file is automatically loaded when the server starts.
+
+## Running the Server
+
+### Stdio Mode (for Claude Desktop)
+
+```bash
+make run-stdio
+# or
+uv run fastmcp run src/mcp_deepl/server.py
+```
+
+### HTTP Mode
+
+```bash
+make run-http
+# or
+uv run uvicorn mcp_deepl.server:app --host 0.0.0.0 --port 8000
+
+# Test the server is running
+make test-http
+```
+
+### Docker
+
+```bash
+# Build image locally
+make docker-build
+
+# Build and push multi-platform image (amd64 + arm64)
+make release VERSION=1.0.0
+
+# Run container
+make docker-run
+```
+
+## Claude Desktop Configuration
+
+Add to your Claude Desktop config file:
+
+**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows**: `%APPDATA%/Claude/claude_desktop_config.json`
+
+### Option 1: HTTP Mode (Recommended)
+
+First, start the HTTP server:
+
+```bash
+make run-http
+```
+
+Then add this to your Claude Desktop config:
+
+```json
+{
+  "mcpServers": {
+    "deepl": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "http://localhost:8000/mcp"
+      ]
+    }
+  }
+}
+```
+
+**Benefits**: Better performance, easier debugging, can be deployed remotely
+
+### Option 2: Stdio Mode
+
+```json
+{
+  "mcpServers": {
+    "deepl": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/absolute/path/to/mcp-deepl",
+        "run",
+        "fastmcp",
+        "run",
+        "src/mcp_deepl/server.py"
+      ]
+    }
+  }
+}
+```
+
+## Available MCP Tools
+
+### Text Translation
+
+- `translate_text(text, target_lang, ...)` - Translate text between languages
+- `translate_with_glossary(text, target_lang, glossary_id, ...)` - Translate using custom glossary
+
+### Language Detection and Info
+
+- `detect_language(text)` - Detect the language of text
+- `list_languages(language_type)` - List all supported languages
+
+### Usage Tracking
+
+- `get_usage()` - Get API usage statistics
+
+### Glossaries
+
+- `list_glossaries()` - List custom glossaries
+- `create_glossary(name, source_lang, target_lang, entries)` - Create custom glossary
+- `get_glossary(glossary_id)` - Get glossary details
+- `delete_glossary(glossary_id)` - Delete a glossary
+
+### Document Translation
+
+- `translate_document(document_path, target_lang, ...)` - Translate entire documents
+- `get_document_status(document_id, document_key)` - Check translation status
+- `download_translated_document(document_id, document_key)` - Download translated document
+
+## Development
+
+### Quick Commands
+
+```bash
+make help          # Show all available commands
+make install       # Install dependencies
+make dev-install   # Install with dev dependencies
+make format        # Format code with ruff
+make lint          # Lint code with ruff
+make typecheck     # Type check with mypy
+make test          # Run tests with pytest
+make test-cov      # Run tests with coverage
+make test-e2e      # Run E2E Docker tests (requires Docker)
+make test-http     # Test HTTP server is running
+make check         # Run all checks (lint + typecheck + test)
+make clean         # Clean up artifacts
+make all           # Full workflow (clean + install + format + check)
+```
+
+### Running Tests
+
+```bash
+# Run unit tests
+make test
+
+# Run with coverage report
+make test-cov
+
+# Run E2E Docker tests (requires Docker, not run in CI)
+make test-e2e
+
+# Run specific test file
+uv run pytest tests/test_server.py -v
+```
+
+### Code Quality
+
+```bash
+# Format code
+make format
+
+# Lint code
+make lint
+
+# Fix linting issues automatically
+make lint-fix
+
+# Type check
+make typecheck
+
+# Run all checks
+make check
+```
+
+### Docker Commands
+
+```bash
+# Build local image
+make docker-build
+
+# Build and push multi-platform image
+make release VERSION=1.0.0
+
+# Run container
+make docker-run
+```
+
+**Multi-Platform Build Setup** (first time only):
+
+```bash
+# Create and use a new buildx builder
+docker buildx create --name multiplatform --use
+
+# Verify the builder
+docker buildx inspect --bootstrap
+```
+
+The `release` command builds for both `linux/amd64` and `linux/arm64` architectures and pushes directly to your container registry.
+
+## Health Check & Troubleshooting
+
+The server exposes a health check endpoint at `/health`:
+
+```bash
+curl http://localhost:8000/health
+# {"status":"healthy","service":"mcp-deepl"}
+
+# Or use the Makefile command
+make test-http
+```
+
+### Troubleshooting HTTP Mode
+
+If Claude Desktop can't connect to the server:
+
+1. **Check server is running**: `make test-http`
+2. **Verify port**: Ensure port 8000 is not in use by another service
+3. **Check logs**: Look at the server output for any errors
+4. **Test MCP endpoint**: `curl http://localhost:8000/` should return MCP protocol info
+5. **Verify .env**: Ensure `DEEPL_API_KEY` is set in your `.env` file
+
+### Changing the Port
+
+To use a different port (e.g., 9000):
+
+```bash
+uv run uvicorn mcp_deepl.server:app --host 0.0.0.0 --port 9000
+```
+
+Then update your Claude Desktop config to use `http://localhost:9000/mcp`
+
 ## Rate Limits
 
 **Free Tier:**
+
 - 500,000 characters per month
 - Suitable for testing and small projects
 
 **Pro Plans:**
+
 - Unlimited characters based on plan
 - Higher priority processing
 - Additional features
@@ -53,274 +333,34 @@ Monitor usage with `get_usage()` tool.
 ## Supported Languages
 
 **European Languages:**
-- Bulgarian (BG)
-- Czech (CS)
-- Danish (DA)
-- German (DE)
-- Greek (EL)
-- English (EN) - British (EN-GB), American (EN-US)
-- Spanish (ES)
-- Estonian (ET)
-- Finnish (FI)
-- French (FR)
-- Hungarian (HU)
-- Indonesian (ID)
-- Italian (IT)
-- Lithuanian (LT)
-- Latvian (LV)
-- Dutch (NL)
-- Polish (PL)
-- Portuguese (PT) - Brazilian (PT-BR), European (PT-PT)
-- Romanian (RO)
-- Russian (RU)
-- Slovak (SK)
-- Slovenian (SL)
-- Swedish (SV)
-- Turkish (TR)
-- Ukrainian (UK)
+Bulgarian (BG), Czech (CS), Danish (DA), German (DE), Greek (EL), English (EN), Spanish (ES), Estonian (ET), Finnish (FI), French (FR), Hungarian (HU), Indonesian (ID), Italian (IT), Lithuanian (LT), Latvian (LV), Dutch (NL), Polish (PL), Portuguese (PT), Romanian (RO), Russian (RU), Slovak (SK), Slovenian (SL), Swedish (SV), Turkish (TR), Ukrainian (UK)
 
 **Asian Languages:**
-- Chinese (ZH) - Simplified only
-- Japanese (JA)
-- Korean (KO)
+Chinese (ZH), Japanese (JA), Korean (KO)
 
-## Available Tools
+## Example Usage
 
-### Text Translation
+### Simple Translation
 
-#### `translate_text`
-Translate text between languages.
-
-**Parameters:**
-- `text` (string or list, required): Text to translate
-- `target_lang` (string, required): Target language code
-- `source_lang` (string, optional): Source language (auto-detect if not provided)
-- `formality` (string, optional): Formality level
-- `preserve_formatting` (bool, optional): Preserve formatting (default: false)
-- `tag_handling` (string, optional): Tag handling mode (xml, html)
-- `split_sentences` (string, optional): Sentence splitting (0, 1, nonewlines)
-
-**Formality Levels** (for DE, FR, IT, ES, NL, PL, PT-BR, PT-PT, JA, RU):
-- `default`: Default formality
-- `more`: More formal
-- `less`: Less formal (more casual)
-- `prefer_more`: Prefer formal but not guaranteed
-- `prefer_less`: Prefer casual but not guaranteed
-
-**Example:**
 ```python
-# Simple translation
+# Translate text
 result = await translate_text(
     text="Hello, world!",
     target_lang="DE"
 )
 
-# With source language
-result = await translate_text(
-    text="Hello, world!",
-    source_lang="EN",
-    target_lang="FR"
-)
-
-# Formal translation
+# With formality control
 result = await translate_text(
     text="How are you?",
     target_lang="DE",
-    formality="more"
+    formality="more"  # Formal German
 )
-
-# Batch translation
-result = await translate_text(
-    text=["Hello", "Goodbye", "Thank you"],
-    target_lang="ES"
-)
-
-# HTML with tag preservation
-result = await translate_text(
-    text="<p>Hello <strong>world</strong>!</p>",
-    target_lang="IT",
-    tag_handling="html"
-)
-
-# Returns:
-# {
-#   "translations": [
-#     {
-#       "detected_source_language": "EN",
-#       "text": "Hallo Welt!"
-#     }
-#   ]
-# }
 ```
 
-### Language Detection
+### Using Glossaries
 
-#### `detect_language`
-Detect the language of text.
-
-**Parameters:**
-- `text` (string, required): Text to analyze
-
-**Example:**
 ```python
-result = await detect_language(text="Bonjour le monde")
-
-# Returns:
-# {
-#   "detected_language": "FR",
-#   "text": "Bonjour le monde"
-# }
-```
-
-#### `list_languages`
-List all supported languages.
-
-**Parameters:**
-- `language_type` (string, optional): Type of languages (source or target, default: target)
-
-**Example:**
-```python
-# List target languages
-languages = await list_languages(language_type="target")
-
-# List source languages
-languages = await list_languages(language_type="source")
-
-# Returns:
-# {
-#   "languages": [
-#     {
-#       "language": "DE",
-#       "name": "German",
-#       "supports_formality": true
-#     },
-#     {
-#       "language": "FR",
-#       "name": "French",
-#       "supports_formality": true
-#     }
-#   ]
-# }
-```
-
-### Document Translation
-
-#### `translate_document`
-Translate entire documents while preserving formatting.
-
-**Supported Formats:**
-- PDF (with and without OCR)
-- Microsoft Word (DOCX)
-- PowerPoint (PPTX)
-- Excel (XLSX)
-- HTML
-- Plain text (TXT)
-
-**Parameters:**
-- `document_path` (string, required): Path or URL to document
-- `target_lang` (string, required): Target language code
-- `source_lang` (string, optional): Source language
-- `formality` (string, optional): Formality level
-- `filename` (string, optional): Original filename
-
-**Example:**
-```python
-# Upload document for translation
-result = await translate_document(
-    document_path="/path/to/document.pdf",
-    target_lang="DE",
-    source_lang="EN"
-)
-
-# Returns document_id and document_key for status checking
-```
-
-#### `get_document_status`
-Check document translation status.
-
-**Parameters:**
-- `document_id` (string, required): Document ID from upload
-- `document_key` (string, required): Document key from upload
-
-**Example:**
-```python
-status = await get_document_status(
-    document_id="abc123",
-    document_key="def456"
-)
-
-# Returns:
-# {
-#   "document_id": "abc123",
-#   "status": "done",
-#   "seconds_remaining": 0,
-#   "billed_characters": 1234
-# }
-```
-
-**Status Values:**
-- `queued`: Waiting to be processed
-- `translating`: Currently being translated
-- `done`: Translation complete
-- `error`: Translation failed
-
-#### `download_translated_document`
-Download completed document translation.
-
-**Parameters:**
-- `document_id` (string, required): Document ID
-- `document_key` (string, required): Document key
-
-**Example:**
-```python
-document = await download_translated_document(
-    document_id="abc123",
-    document_key="def456"
-)
-
-# Returns translated document data
-```
-
-### Glossaries
-
-Custom glossaries ensure consistent translation of specific terms across all your content.
-
-#### `list_glossaries`
-List all custom glossaries.
-
-**Example:**
-```python
-glossaries = await list_glossaries()
-
-# Returns:
-# {
-#   "glossaries": [
-#     {
-#       "glossary_id": "abc123",
-#       "name": "Product Terms",
-#       "ready": true,
-#       "source_lang": "EN",
-#       "target_lang": "DE",
-#       "creation_time": "2025-10-08T12:00:00",
-#       "entry_count": 50
-#     }
-#   ]
-# }
-```
-
-#### `create_glossary`
-Create a custom glossary.
-
-**Parameters:**
-- `name` (string, required): Glossary name
-- `source_lang` (string, required): Source language code
-- `target_lang` (string, required): Target language code
-- `entries` (dict, required): Source:target translation pairs
-- `entries_format` (string, optional): Format (tsv or csv, default: tsv)
-
-**Example:**
-```python
-# Create product terminology glossary
+# Create glossary for consistent terminology
 glossary = await create_glossary(
     name="Product Terms",
     source_lang="EN",
@@ -328,250 +368,43 @@ glossary = await create_glossary(
     entries={
         "smartphone": "Smartphone",
         "tablet": "Tablet-PC",
-        "app": "App",
-        "cloud": "Cloud"
+        "app": "App"
     }
 )
 
-# Returns:
-# {
-#   "glossary_id": "abc123",
-#   "name": "Product Terms",
-#   "ready": true,
-#   "source_lang": "EN",
-#   "target_lang": "DE",
-#   "creation_time": "2025-10-08T12:00:00",
-#   "entry_count": 4
-# }
-```
-
-#### `get_glossary`
-Get glossary details.
-
-**Parameters:**
-- `glossary_id` (string, required): Glossary ID
-
-**Example:**
-```python
-glossary = await get_glossary(glossary_id="abc123")
-```
-
-#### `delete_glossary`
-Delete a glossary.
-
-**Parameters:**
-- `glossary_id` (string, required): Glossary ID
-
-**Example:**
-```python
-result = await delete_glossary(glossary_id="abc123")
-```
-
-#### `translate_with_glossary`
-Translate using a custom glossary.
-
-**Parameters:**
-- `text` (string or list, required): Text to translate
-- `target_lang` (string, required): Target language code
-- `glossary_id` (string, required): Glossary ID
-- `source_lang` (string, optional): Source language
-- `formality` (string, optional): Formality level
-
-**Example:**
-```python
+# Translate using glossary
 result = await translate_with_glossary(
-    text="Our new smartphone app uses the cloud",
+    text="Our new smartphone app",
     target_lang="DE",
-    glossary_id="abc123"
-)
-
-# Ensures consistent translation of terms from glossary
-```
-
-### Usage Tracking
-
-#### `get_usage`
-Get API usage statistics.
-
-**Example:**
-```python
-usage = await get_usage()
-
-# Returns:
-# {
-#   "character_count": 123456,
-#   "character_limit": 500000,
-#   "document_count": 5,
-#   "document_limit": 10,
-#   "team_document_count": 5,
-#   "team_document_limit": 10
-# }
-```
-
-## Common Workflows
-
-### Website Localization
-```python
-# Translate web page content
-html_content = """
-<div>
-    <h1>Welcome to our site</h1>
-    <p>We offer <strong>quality products</strong></p>
-</div>
-"""
-
-result = await translate_text(
-    text=html_content,
-    target_lang="DE",
-    tag_handling="html",
-    preserve_formatting=True
-)
-
-# Preserve HTML structure while translating content
-```
-
-### Document Translation Workflow
-```python
-# 1. Upload document
-upload = await translate_document(
-    document_path="report.pdf",
-    target_lang="FR",
-    source_lang="EN",
-    formality="more"
-)
-
-# 2. Check status
-status = await get_document_status(
-    document_id=upload["document_id"],
-    document_key=upload["document_key"]
-)
-
-# 3. Download when ready
-if status["status"] == "done":
-    document = await download_translated_document(
-        document_id=upload["document_id"],
-        document_key=upload["document_key"]
-    )
-```
-
-### Product Catalog Translation
-```python
-# 1. Create glossary for brand terms
-glossary = await create_glossary(
-    name="Brand Terms",
-    source_lang="EN",
-    target_lang="ES",
-    entries={
-        "Premium Edition": "Edición Premium",
-        "Pro Version": "Versión Pro",
-        "Basic Plan": "Plan Básico"
-    }
-)
-
-# 2. Translate product descriptions
-products = [
-    "Premium Edition includes all features",
-    "Pro Version for professionals",
-    "Basic Plan for individuals"
-]
-
-for product in products:
-    result = await translate_with_glossary(
-        text=product,
-        target_lang="ES",
-        glossary_id=glossary["glossary_id"]
-    )
-    print(result["translations"][0]["text"])
-```
-
-### Customer Support Translation
-```python
-# Detect customer's language
-message = "¿Cómo puedo devolver mi pedido?"
-detection = await detect_language(text=message)
-
-# Translate to English for support team
-translation = await translate_text(
-    text=message,
-    source_lang=detection["detected_language"],
-    target_lang="EN"
-)
-
-# Reply in customer's language
-reply = await translate_text(
-    text="You can return your order within 30 days",
-    target_lang=detection["detected_language"],
-    formality="more"  # Polite tone
+    glossary_id=glossary.glossary_id
 )
 ```
 
-## Best Practices
-
-1. **Use source language**: Specify when known for better accuracy
-2. **Leverage glossaries**: Ensure consistent terminology
-3. **Choose formality**: Match your audience and context
-4. **Batch translations**: More efficient for multiple texts
-5. **Preserve formatting**: Use tag_handling for markup
-6. **Monitor usage**: Track character consumption
-7. **Cache translations**: Avoid re-translating same content
-8. **Test formality**: Different levels for different audiences
-9. **Handle errors**: Implement retry logic
-10. **Document format**: Use appropriate format for documents
-
-## Formality Examples
-
-**German (DE):**
-```python
-# Casual
-await translate_text("How are you?", target_lang="DE", formality="less")
-# → "Wie geht's?"
-
-# Formal
-await translate_text("How are you?", target_lang="DE", formality="more")
-# → "Wie geht es Ihnen?"
-```
-
-**French (FR):**
-```python
-# Casual (tu form)
-await translate_text("How are you?", target_lang="FR", formality="less")
-# → "Comment vas-tu?"
-
-# Formal (vous form)
-await translate_text("How are you?", target_lang="FR", formality="more")
-# → "Comment allez-vous?"
-```
-
-## Tag Handling
-
-Preserve markup in translations:
+### Language Detection
 
 ```python
-# XML tags
-await translate_text(
-    text="<note>This is important</note>",
-    target_lang="DE",
-    tag_handling="xml"
-)
-
-# HTML tags
-await translate_text(
-    text="<p>Visit our <a href='#'>website</a></p>",
-    target_lang="FR",
-    tag_handling="html"
-)
+# Detect language
+result = await detect_language(text="Bonjour le monde")
+# Returns: {"detected_language": "FR", ...}
 ```
 
-## Error Handling
+## Requirements
 
-Common errors:
+- Python 3.13+
+- deepl (official DeepL Python client)
+- fastapi
+- fastmcp
+- pydantic
+- python-dotenv
+- uvicorn
 
-- **403 Forbidden**: Invalid API key
-- **456 Quota Exceeded**: Character limit reached
-- **400 Bad Request**: Invalid parameters
-- **404 Not Found**: Resource not found
-- **429 Too Many Requests**: Rate limit exceeded
-- **503 Service Unavailable**: Server temporarily unavailable
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.
+
+## License
+
+MIT
 
 ## API Documentation
 
@@ -579,11 +412,3 @@ Common errors:
 - [Text Translation](https://www.deepl.com/docs-api/translate-text/)
 - [Document Translation](https://www.deepl.com/docs-api/translate-documents/)
 - [Glossaries](https://www.deepl.com/docs-api/glossaries/)
-- [Language Codes](https://www.deepl.com/docs-api/translate-text/request/)
-
-## Support
-
-- [Help Center](https://support.deepl.com/)
-- [Contact Support](https://www.deepl.com/contact)
-- [API Status](https://status.deepl.com/)
-- [Developer Forum](https://forum.deepl.com/)
