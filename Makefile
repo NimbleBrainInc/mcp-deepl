@@ -1,5 +1,5 @@
 IMAGE_NAME = nimbletools/mcp-deepl
-VERSION ?= 1.0.0
+VERSION ?= 1.0.1
 
 .PHONY: help install dev-install format lint test clean run check all docker-build release docker-run
 
@@ -74,6 +74,7 @@ release: ## Build and push multi-platform Docker image
 	docker buildx build --platform linux/amd64,linux/arm64 \
 		-t $(IMAGE_NAME):$(VERSION) \
 		-t $(IMAGE_NAME):latest \
+		--no-cache \
 		--push .
 
 # Aliases
