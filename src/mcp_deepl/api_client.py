@@ -150,7 +150,7 @@ class DeepLClient:
         """
         try:
             # Translate to detect language (DeepL doesn't have dedicated detection endpoint)
-            result = self._translator.translate_text(text[:1000], target_lang="EN")
+            result = self._translator.translate_text(text[:1000], target_lang="EN-US")
 
             # Handle both single result and list
             detected_lang = None
