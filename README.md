@@ -1,6 +1,23 @@
 # MCP Server DeepL
 
-Production-ready MCP server for DeepL Translation API with comprehensive tooling, type safety, and enterprise-grade architecture.
+[![NimbleTools Registry](https://img.shields.io/badge/NimbleTools-Registry-green)](https://github.com/nimbletoolsinc/mcp-registry)
+[![NimbleBrain Platform](https://img.shields.io/badge/NimbleBrain-Platform-blue)](https://www.nimblebrain.ai)
+[![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?logo=discord&logoColor=white)](https://www.nimblebrain.ai/discord?utm_source=github&utm_medium=readme&utm_campaign=mcp-deepl&utm_content=discord-badge)
+
+[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/NimbleBrainInc/mcp-deepl/actions/workflows/ci.yaml/badge.svg)](https://github.com/NimbleBrainInc/mcp-deepl/actions)
+
+
+## About
+
+**MCP Server - DeepL** is a production-ready Model Context Protocol (MCP) server that provides
+seamless integration with [Deepl's](https://www.deepl.com/) industry-leading neural machine translation API.
+Built with enterprise-grade architecture and strict type safety, this server enables AI assistants
+and agents to translate text and documents across 30+ languages, detect languages, manage custom
+glossaries for consistent terminology, and leverage DeepL's advanced features like formality
+control and context-aware translations—all through a type-safe, async-first interface powered by FastMCP.
+
 
 ## Features
 
@@ -20,7 +37,7 @@ Production-ready MCP server for DeepL Translation API with comprehensive tooling
 
 ## Architecture
 
-This server follows S-Tier MCP Server Architecture:
+This server follows MCP Server Architecture:
 
 ```
 src/mcp_deepl/
@@ -407,6 +424,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.
 MIT
 
 ## API Documentation
+
+Part of the [NimbleTools Registry](https://github.com/nimbletoolsinc/mcp-registry) - an open source collection of production-ready MCP servers. For enterprise deployment, check out [NimbleBrain](https://www.nimblebrain.ai).
 
 - [DeepL API Documentation](https://www.deepl.com/docs-api)
 - [Text Translation](https://www.deepl.com/docs-api/translate-text/)

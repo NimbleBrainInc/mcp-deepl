@@ -58,7 +58,7 @@ class DeepLClient:
         """Close the translator client and cleanup HTTP session."""
         # Close the underlying HTTP client to prevent hanging connections
         if hasattr(self._translator, "_client") and self._translator._client:
-            self._translator._client.close()
+            self._translator._client.close()  # type: ignore[no-untyped-call]
 
     # Translation methods
 
@@ -89,7 +89,7 @@ class DeepLClient:
         try:
             # Convert split_sentences to the format expected by the official client
             # The DeepL SDK accepts: "0"/"off", "1"/"on", "nonewlines", or None
-            split_sentences_param: str | int | None = None
+            split_sentences_param: str | None = None
             if split_sentences == "0":
                 split_sentences_param = "0"
             elif split_sentences == "1":
