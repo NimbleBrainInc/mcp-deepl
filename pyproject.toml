@@ -59,7 +59,7 @@ show_error_codes = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
-disable_error_code = ["unused-coroutine", "misc"]
+disable_error_code = ["unused-coroutine", "misc", "untyped-decorator"]
 
 [dependency-groups]
 dev = [

@@ -1,0 +1,19 @@
+{
+  "manifest_version": "0.3",
+  "name": "ai.nimbletools/deepl",
+  "version": "1.0.0",
+  "description": "DeepL translation API with comprehensive translation tools",
+  "author": {
+    "name": "NimbleBrain Inc"
+  },
+  "server": {
+    "type": "python",
+    "entry_point": "mcp_deepl/server.py",
+    "mcp_config": {
+      "command": "python",
+      "args": [
+        "${__dirname}/mcp_deepl/server.py"
+      ]
+    }
+  }
+}
