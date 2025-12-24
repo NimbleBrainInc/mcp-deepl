@@ -4,9 +4,9 @@ import os
 from typing import Any
 
 from dotenv import load_dotenv
-from fastapi import Request
-from fastapi.responses import JSONResponse
-from mcp.server.fastmcp import Context, FastMCP
+from fastmcp import Context, FastMCP
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 from .api_client import DeepLAPIError, DeepLClient
 from .api_models import (
@@ -30,7 +30,7 @@ mcp = FastMCP("DeepL")
 _client: DeepLClient | None = None
 
 
-def get_client(ctx: Context[Any, Any, Any]) -> DeepLClient:
+def get_client() -> DeepLClient:
     """Get or create the API client instance."""
     global _client
     if _client is None:
@@ -61,7 +61,7 @@ async def translate_text(
     preserve_formatting: bool = False,
     tag_handling: str | None = None,
     split_sentences: str = "1",
-    ctx: Context[Any, Any, Any] = None,  # type: ignore[assignment]
+    ctx: Context | None = None,
 ) -> TranslationResponse:
     """Translate text between languages.
 
@@ -78,7 +78,7 @@ async def translate_text(
     Returns:
         Translation response with translated text
     """
-    client = get_client(ctx)
+    client = get_client()
     try:
         return await client.translate_text(
             text=text,
@@ -90,7 +90,8 @@ async def translate_text(
             split_sentences=split_sentences,
         )
     except DeepLAPIError as e:
-        await ctx.error(f"Translation error: {e.message}")
+        if ctx:
+            await ctx.error(f"Translation error: {e.message}")
         raise
 
 
@@ -101,7 +102,7 @@ async def translate_with_glossary(
     glossary_id: str,
     source_lang: str | None = None,
     formality: str | None = None,
-    ctx: Context[Any, Any, Any] = None,  # type: ignore[assignment]
+    ctx: Context | None = None,
 ) -> TranslationResponse:
     """Translate using a custom glossary.
 
@@ -116,7 +117,7 @@ async def translate_with_glossary(
     Returns:
         Translation response
     """
-    client = get_client(ctx)
+    client = get_client()
     try:
         return await client.translate_with_glossary(
             text=text,
@@ -126,7 +127,8 @@ async def translate_with_glossary(
             formality=formality,
         )
     except DeepLAPIError as e:
-        await ctx.error(f"Translation error: {e.message}")
+        if ctx:
+            await ctx.error(f"Translation error: {e.message}")
         raise
 
 
@@ -136,7 +138,7 @@ async def translate_with_glossary(
 @mcp.tool()
 async def detect_language(
     text: str,
-    ctx: Context[Any, Any, Any] = None,  # type: ignore[assignment]
+    ctx: Context | None = None,
 ) -> LanguageDetectionResponse:
     """Detect the language of text.
 
@@ -147,18 +149,19 @@ async def detect_language(
     Returns:
         Detected language information
     """
-    client = get_client(ctx)
+    client = get_client()
     try:
         return await client.detect_language(text)
     except DeepLAPIError as e:
-        await ctx.error(f"Language detection error: {e.message}")
+        if ctx:
+            await ctx.error(f"Language detection error: {e.message}")
         raise
 
 
 @mcp.tool()
 async def list_languages(
     language_type: str = "target",
-    ctx: Context[Any, Any, Any] = None,  # type: ignore[assignment]
+    ctx: Context | None = None,
 ) -> LanguagesResponse:
     """List all supported source and target languages.
 
@@ -169,11 +172,12 @@ async def list_languages(
     Returns:
         List of supported languages
     """
-    client = get_client(ctx)
+    client = get_client()
     try:
         return await client.list_languages(language_type)
     except DeepLAPIError as e:
-        await ctx.error(f"Error listing languages: {e.message}")
+        if ctx:
+            await ctx.error(f"Error listing languages: {e.message}")
         raise
 
 
@@ -182,7 +186,7 @@ async def list_languages(
 
 @mcp.tool()
 async def get_usage(
-    ctx: Context[Any, Any, Any] = None,  # type: ignore[assignment]
+    ctx: Context | None = None,
 ) -> UsageResponse:
     """Get API usage statistics.
 
@@ -192,11 +196,12 @@ async def get_usage(
     Returns:
         Usage statistics
     """
-    client = get_client(ctx)
+    client = get_client()
     try:
         return await client.get_usage()
     except DeepLAPIError as e:
-        await ctx.error(f"Error getting usage: {e.message}")
+        if ctx:
+            await ctx.error(f"Error getting usage: {e.message}")
         raise
 
 
@@ -205,7 +210,7 @@ async def get_usage(
 
 @mcp.tool()
 async def list_glossaries(
-    ctx: Context[Any, Any, Any] = None,  # type: ignore[assignment]
+    ctx: Context | None = None,
 ) -> GlossariesResponse:
     """List custom glossaries.
 
@@ -215,11 +220,12 @@ async def list_glossaries(
     Returns:
         List of glossaries
     """
-    client = get_client(ctx)
+    client = get_client()
     try:
         return await client.list_glossaries()
     except DeepLAPIError as e:
-        await ctx.error(f"Error listing glossaries: {e.message}")
+        if ctx:
+            await ctx.error(f"Error listing glossaries: {e.message}")
         raise
 
 
@@ -230,7 +236,7 @@ async def create_glossary(
     target_lang: str,
     entries: dict[str, str],
     entries_format: str = "tsv",
-    ctx: Context[Any, Any, Any] = None,  # type: ignore[assignment]
+    ctx: Context | None = None,
 ) -> Glossary:
     """Create a custom glossary for consistent translations.
 
@@ -245,7 +251,7 @@ async def create_glossary(
     Returns:
         Created glossary information
     """
-    client = get_client(ctx)
+    client = get_client()
     try:
         return await client.create_glossary(
             name=name,
@@ -255,14 +261,15 @@ async def create_glossary(
             entries_format=entries_format,
         )
     except DeepLAPIError as e:
-        await ctx.error(f"Error creating glossary: {e.message}")
+        if ctx:
+            await ctx.error(f"Error creating glossary: {e.message}")
         raise
 
 
 @mcp.tool()
 async def get_glossary(
     glossary_id: str,
-    ctx: Context[Any, Any, Any] = None,  # type: ignore[assignment]
+    ctx: Context | None = None,
 ) -> Glossary:
     """Get glossary details.
 
@@ -273,18 +280,19 @@ async def get_glossary(
     Returns:
         Glossary information
     """
-    client = get_client(ctx)
+    client = get_client()
     try:
         return await client.get_glossary(glossary_id)
     except DeepLAPIError as e:
-        await ctx.error(f"Error getting glossary: {e.message}")
+        if ctx:
+            await ctx.error(f"Error getting glossary: {e.message}")
         raise
 
 
 @mcp.tool()
 async def delete_glossary(
     glossary_id: str,
-    ctx: Context[Any, Any, Any] = None,  # type: ignore[assignment]
+    ctx: Context | None = None,
 ) -> dict[str, Any]:
     """Delete a glossary.
 
@@ -295,11 +303,12 @@ async def delete_glossary(
     Returns:
         Success confirmation
     """
-    client = get_client(ctx)
+    client = get_client()
     try:
         return await client.delete_glossary(glossary_id)
     except DeepLAPIError as e:
-        await ctx.error(f"Error deleting glossary: {e.message}")
+        if ctx:
+            await ctx.error(f"Error deleting glossary: {e.message}")
         raise
 
 
@@ -313,7 +322,7 @@ async def translate_document(
     source_lang: str | None = None,
     formality: str | None = None,
     filename: str | None = None,
-    ctx: Context[Any, Any, Any] = None,  # type: ignore[assignment]
+    ctx: Context | None = None,
 ) -> dict[str, str]:
     """Translate entire documents (PDF, DOCX, PPTX, etc.).
 
@@ -331,10 +340,11 @@ async def translate_document(
     Returns:
         Document ID and key for status checking
     """
-    await ctx.warning(
-        "Document upload is a placeholder - production implementation "
-        "requires multipart form data handling"
-    )
+    if ctx:
+        await ctx.warning(
+            "Document upload is a placeholder - production implementation "
+            "requires multipart form data handling"
+        )
     return {
         "document_id": "placeholder_id",
         "document_key": "placeholder_key",
@@ -346,7 +356,7 @@ async def translate_document(
 async def get_document_status(
     document_id: str,
     document_key: str,
-    ctx: Context[Any, Any, Any] = None,  # type: ignore[assignment]
+    ctx: Context | None = None,
 ) -> DocumentStatusResponse:
     """Check document translation status.
 
@@ -358,11 +368,12 @@ async def get_document_status(
     Returns:
         Document status information
     """
-    client = get_client(ctx)
+    client = get_client()
     try:
         return await client.get_document_status(document_id, document_key)
     except DeepLAPIError as e:
-        await ctx.error(f"Error getting document status: {e.message}")
+        if ctx:
+            await ctx.error(f"Error getting document status: {e.message}")
         raise
 
 
@@ -370,7 +381,7 @@ async def get_document_status(
 async def download_translated_document(
     document_id: str,
     document_key: str,
-    ctx: Context[Any, Any, Any] = None,  # type: ignore[assignment]
+    ctx: Context | None = None,
 ) -> DocumentDownloadResponse:
     """Download completed document translation.
 
@@ -382,23 +393,14 @@ async def download_translated_document(
     Returns:
         Document download information
     """
-    client = get_client(ctx)
+    client = get_client()
     try:
         return await client.download_translated_document(document_id, document_key)
     except DeepLAPIError as e:
-        await ctx.error(f"Error downloading document: {e.message}")
+        if ctx:
+            await ctx.error(f"Error downloading document: {e.message}")
         raise
 
 
-# Create ASGI application for uvicorn
-app = mcp.streamable_http_app()
-
-
-# Cleanup on shutdown
-@app.on_event("shutdown")
-async def shutdown_event() -> None:
-    """Clean up resources on server shutdown."""
-    global _client
-    if _client is not None:
-        await _client.close()
-        _client = None
+# Create ASGI application for deployment
+app = mcp.http_app()
