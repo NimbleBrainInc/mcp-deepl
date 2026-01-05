@@ -1,17 +1,29 @@
 {
   "manifest_version": "0.3",
   "name": "@nimblebraininc/deepl",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "DeepL translation API with comprehensive translation tools",
   "author": {
     "name": "NimbleBrain Inc"
+  },
+  "user_config": {
+    "api_key": {
+      "type": "string",
+      "title": "DeepL API Key",
+      "description": "Your DeepL API key from https://www.deepl.com/pro-api",
+      "sensitive": true,
+      "required": true
+    }
   },
   "server": {
     "type": "python",
     "entry_point": "mcp_deepl.server",
     "mcp_config": {
       "command": "python",
-      "args": ["-m", "mcp_deepl.server"]
+      "args": ["-m", "mcp_deepl.server"],
+      "env": {
+        "DEEPL_API_KEY": "${user_config.api_key}"
+      }
     }
   }
 }
