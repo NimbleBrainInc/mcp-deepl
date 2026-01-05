@@ -404,3 +404,7 @@ async def download_translated_document(
 
 # Create ASGI application for deployment
 app = mcp.http_app()
+
+# Stdio entrypoint for mpak/Claude Desktop
+if __name__ == "__main__":
+    mcp.run()
