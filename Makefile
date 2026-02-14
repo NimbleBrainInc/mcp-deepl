@@ -1,7 +1,8 @@
-IMAGE_NAME = nimbletools/mcp-deepl
-VERSION ?= 1.0.1
+# MCPB bundle configuration
+BUNDLE_NAME = mcp-deepl
+VERSION ?= 0.0.1
 
-.PHONY: help install dev-install format lint test clean run check all docker-build release docker-run
+.PHONY: help install dev-install format format-check lint lint-fix typecheck test test-cov test-e2e clean check all bundle run run-stdio run-http test-http
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -18,6 +19,9 @@ dev-install: ## Install with dev dependencies
 format: ## Format code with ruff
 	uv run ruff format src/ tests/
 
+format-check: ## Check code formatting with ruff
+	uv run ruff format --check src/ tests/
+
 lint: ## Lint code with ruff
 	uv run ruff check src/ tests/
 
@@ -33,7 +37,7 @@ test: ## Run tests with pytest
 test-cov: ## Run tests with coverage
 	uv run pytest tests/ -v --cov=src/mcp_deepl --cov-report=term-missing
 
-test-e2e: ## Run end-to-end Docker tests
+test-e2e: ## Run end-to-end MCPB tests
 	uv run pytest e2e/ -v -s
 
 clean: ## Clean up artifacts
@@ -45,6 +49,7 @@ clean: ## Clean up artifacts
 	find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".coverage" -exec rm -rf {} + 2>/dev/null || true
+	rm -rf bundle/ *.mcpb
 
 run: ## Run the MCP server
 	uv run python -m mcp_deepl.server
@@ -59,23 +64,36 @@ test-http: ## Test HTTP server is running
 	@echo "Testing health endpoint..."
 	@curl -s http://localhost:8000/health | grep -q "healthy" && echo "✓ Server is healthy" || echo "✗ Server not responding"
 
-check: lint typecheck test ## Run all checks
+check: format-check lint typecheck test ## Run all checks
 
 all: clean install format lint typecheck test ## Full workflow
 
-# Docker commands
-docker-build: ## Build Docker image locally
-	docker build -t $(IMAGE_NAME):$(VERSION) -t $(IMAGE_NAME):latest .
+# MCPB bundle commands
+bundle: ## Build MCPB bundle locally
+	@./scripts/build-bundle.sh . $(VERSION)
 
-docker-run: ## Run Docker container
-	docker run -e DEEPL_API_KEY=$(DEEPL_API_KEY) -p 8000:8000 $(IMAGE_NAME):$(VERSION)
+bundle-run: bundle ## Build and run MCPB bundle locally
+	@echo "Starting bundle with mcpb-python base image..."
+	@python -m http.server 9999 --directory . &
+	@sleep 1
+	docker run --rm \
+		--add-host host.docker.internal:host-gateway \
+		-p 8000:8000 \
+		-e BUNDLE_URL=http://host.docker.internal:9999/$(BUNDLE_NAME)-v$(VERSION).mcpb \
+		ghcr.io/nimblebrain/mcpb-python:3.14
 
-release: ## Build and push multi-platform Docker image
-	docker buildx build --platform linux/amd64,linux/arm64 \
-		-t $(IMAGE_NAME):$(VERSION) \
-		-t $(IMAGE_NAME):latest \
-		--no-cache \
-		--push .
+bump: ## Bump version across all files (usage: make bump VERSION=0.2.0)
+	@if [ -z "$(VERSION)" ]; then echo "Usage: make bump VERSION=x.y.z"; exit 1; fi
+	@echo "Bumping version to $(VERSION)..."
+	@jq --arg v "$(VERSION)" '.version = $$v' manifest.json > manifest.tmp.json && mv manifest.tmp.json manifest.json
+	@jq --arg v "$(VERSION)" '.version = $$v' server.json > server.tmp.json && mv server.tmp.json server.json
+	@sed -i '' 's/^version = ".*"/version = "$(VERSION)"/' pyproject.toml
+	@sed -i '' 's/^__version__ = ".*"/__version__ = "$(VERSION)"/' src/mcp_deepl/__init__.py
+	@echo "Updated:"
+	@echo "  manifest.json:          $$(jq -r .version manifest.json)"
+	@echo "  server.json:            $$(jq -r .version server.json)"
+	@echo "  pyproject.toml:         $$(grep '^version' pyproject.toml)"
+	@echo "  src/mcp_deepl/__init__.py: $$(grep '__version__' src/mcp_deepl/__init__.py)"
 
 # Aliases
 fmt: format

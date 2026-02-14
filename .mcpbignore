@@ -5,6 +5,8 @@
 .pytest_cache/
 __pycache__/
 *.pyc
+
+# Tool caches
 .mypy_cache/
 .ruff_cache/
 .coverage
@@ -22,12 +24,27 @@ build/
 # Dev config
 Makefile
 pytest.ini
+pyproject.toml
 .env
 .env.*
 
 # Lock files
 uv.lock
 
+# Scripts
+scripts/
+
+# Docker
+Dockerfile
+
+# Claude Code
+.claude/
+CLAUDE.md
+
 # IDE
 .vscode/
 .idea/
+
+# Misc
+requirements.txt
+test.json

@@ -1,10 +1,15 @@
 {
-  "manifest_version": "0.3",
+  "manifest_version": "0.4",
   "name": "@nimblebraininc/deepl",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "DeepL translation API with comprehensive translation tools",
   "author": {
-    "name": "NimbleBrain Inc"
+    "name": "NimbleBrain Inc",
+    "email": "hello@nimblebrain.ai"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NimbleBrainInc/mcp-deepl"
   },
   "user_config": {
     "api_key": {
@@ -20,9 +25,75 @@
     "entry_point": "mcp_deepl.server",
     "mcp_config": {
       "command": "python",
-      "args": ["-m", "mcp_deepl.server"],
+      "args": [
+        "-m",
+        "mcp_deepl.server"
+      ],
       "env": {
         "DEEPL_API_KEY": "${user_config.api_key}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "translate_text",
+      "description": "Translate text between languages with optional formality and formatting controls"
+    },
+    {
+      "name": "translate_with_glossary",
+      "description": "Translate text using a custom glossary for consistent terminology"
+    },
+    {
+      "name": "detect_language",
+      "description": "Detect the language of a given text"
+    },
+    {
+      "name": "list_languages",
+      "description": "List all supported source and target languages"
+    },
+    {
+      "name": "get_usage",
+      "description": "Get DeepL API usage statistics and quota information"
+    },
+    {
+      "name": "list_glossaries",
+      "description": "List all custom glossaries"
+    },
+    {
+      "name": "create_glossary",
+      "description": "Create a custom glossary for consistent translations"
+    },
+    {
+      "name": "get_glossary",
+      "description": "Get details of a specific glossary"
+    },
+    {
+      "name": "delete_glossary",
+      "description": "Delete a custom glossary"
+    },
+    {
+      "name": "translate_document",
+      "description": "Translate entire documents (PDF, DOCX, PPTX)"
+    },
+    {
+      "name": "get_document_status",
+      "description": "Check the status of a document translation"
+    },
+    {
+      "name": "download_translated_document",
+      "description": "Download a completed translated document"
+    }
+  ],
+  "_meta": {
+    "org.mpaktrust": {
+      "mtf_version": "0.1",
+      "level": 2,
+      "permissions": {
+        "filesystem": "full",
+        "network": "outbound",
+        "environment": "read",
+        "subprocess": "none",
+        "native": "none"
       }
     }
   }
