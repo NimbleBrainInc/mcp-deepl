@@ -31,13 +31,13 @@ jobs:
         run: uv sync --all-extras --dev
 
       - name: Run linting
-        run: uv run ruff check src/ tests/
+        run: uv run ruff check src/ tests/ tests-integration/
 
       - name: Run formatting check
-        run: uv run ruff format --check src/ tests/
+        run: uv run ruff format --check src/ tests/ tests-integration/
 
       - name: Run type checking
-        run: uv run mypy src/
+        run: uv run ty check src/
 
       - name: Run tests
         run: uv run pytest tests/ -v --cov=src/mcp_deepl --cov-report=term-missing
@@ -63,10 +63,10 @@ jobs:
         run: uv sync --all-extras --dev
 
       - name: Run linting
-        run: uv run ruff check src/ tests/
+        run: uv run ruff check src/ tests/ tests-integration/
 
       - name: Run formatting check
-        run: uv run ruff format --check src/ tests/
+        run: uv run ruff format --check src/ tests/ tests-integration/
 
   typecheck:
     runs-on: ubuntu-latest
@@ -89,4 +89,4 @@ jobs:
         run: uv sync --all-extras --dev
 
       - name: Run type checking
-        run: uv run mypy src/
+        run: uv run ty check src/

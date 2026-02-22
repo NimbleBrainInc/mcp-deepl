@@ -1,11 +1,11 @@
 """Pydantic models for DeepL API responses."""
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class FormalityLevel(str, Enum):
+class FormalityLevel(StrEnum):
     """Enum for formality levels."""
 
     DEFAULT = "default"
@@ -15,14 +15,14 @@ class FormalityLevel(str, Enum):
     PREFER_LESS = "prefer_less"
 
 
-class TagHandling(str, Enum):
+class TagHandling(StrEnum):
     """Enum for tag handling modes."""
 
     XML = "xml"
     HTML = "html"
 
 
-class SplitSentences(str, Enum):
+class SplitSentences(StrEnum):
     """Enum for sentence splitting modes."""
 
     NONE = "0"
@@ -30,14 +30,14 @@ class SplitSentences(str, Enum):
     NO_NEWLINES = "nonewlines"
 
 
-class LanguageType(str, Enum):
+class LanguageType(StrEnum):
     """Enum for language types."""
 
     SOURCE = "source"
     TARGET = "target"
 
 
-class DocumentStatus(str, Enum):
+class DocumentStatus(StrEnum):
     """Enum for document translation status."""
 
     QUEUED = "queued"
