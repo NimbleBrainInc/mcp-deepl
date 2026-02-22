@@ -1,7 +1,7 @@
 """Wrapper around official DeepL Python client for async compatibility."""
 
 import os
-from typing import Any
+from typing import Any, cast
 
 import deepl
 
@@ -58,7 +58,7 @@ class DeepLClient:
         """Close the translator client and cleanup HTTP session."""
         # Close the underlying HTTP client to prevent hanging connections
         if hasattr(self._translator, "_client") and self._translator._client:
-            self._translator._client.close()  # type: ignore[no-untyped-call]
+            self._translator._client.close()
 
     # Translation methods
 
@@ -98,7 +98,7 @@ class DeepLClient:
                 split_sentences_param = "nonewlines"
 
             # Call the official DeepL client
-            result = self._translator.translate_text(
+            raw = self._translator.translate_text(
                 text,
                 target_lang=target_lang,
                 source_lang=source_lang,
@@ -109,15 +109,19 @@ class DeepLClient:
             )
 
             # Convert result to our response model
-            if isinstance(result, list):
+            # deepl.TextResult attrs are set in __init__ without annotations,
+            # so ty can't resolve them — cast to help the type checker.
+            if isinstance(raw, list):
+                results = cast(list[deepl.TextResult], raw)
                 translations = [
                     Translation(
                         detected_source_language=r.detected_source_lang,
                         text=r.text,
                     )
-                    for r in result
+                    for r in results
                 ]
             else:
+                result = cast(deepl.TextResult, raw)
                 translations = [
                     Translation(
                         detected_source_language=result.detected_source_lang,
@@ -150,15 +154,15 @@ class DeepLClient:
         """
         try:
             # Translate to detect language (DeepL doesn't have dedicated detection endpoint)
-            result = self._translator.translate_text(text[:1000], target_lang="EN-US")
+            raw = self._translator.translate_text(text[:1000], target_lang="EN-US")
 
             # Handle both single result and list
             detected_lang = None
-            if isinstance(result, list):
-                if result:
-                    detected_lang = result[0].detected_source_lang
+            if isinstance(raw, list):
+                if raw:
+                    detected_lang = cast(deepl.TextResult, raw[0]).detected_source_lang
             else:
-                detected_lang = result.detected_source_lang
+                detected_lang = cast(deepl.TextResult, raw).detected_source_lang
 
             return LanguageDetectionResponse(
                 detected_language=detected_lang,
@@ -362,7 +366,7 @@ class DeepLClient:
             Translation response
         """
         try:
-            result = self._translator.translate_text(
+            raw = self._translator.translate_text(
                 text,
                 target_lang=target_lang,
                 source_lang=source_lang,
@@ -371,15 +375,17 @@ class DeepLClient:
             )
 
             # Convert result to our response model
-            if isinstance(result, list):
+            if isinstance(raw, list):
+                results = cast(list[deepl.TextResult], raw)
                 translations = [
                     Translation(
                         detected_source_language=r.detected_source_lang,
                         text=r.text,
                     )
-                    for r in result
+                    for r in results
                 ]
             else:
+                result = cast(deepl.TextResult, raw)
                 translations = [
                     Translation(
                         detected_source_language=result.detected_source_lang,

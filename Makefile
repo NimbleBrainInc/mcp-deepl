@@ -2,7 +2,7 @@
 BUNDLE_NAME = mcp-deepl
 VERSION ?= 0.0.1
 
-.PHONY: help install dev-install format format-check lint lint-fix typecheck test test-cov test-e2e clean check all bundle run run-stdio run-http test-http
+.PHONY: help install dev-install format format-check lint lint-fix typecheck test test-cov test-e2e test-integration test-integration-verbose test-all clean check all bundle run run-stdio run-http test-http bump
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -17,19 +17,19 @@ dev-install: ## Install with dev dependencies
 	uv pip install -e . --group dev
 
 format: ## Format code with ruff
-	uv run ruff format src/ tests/
+	uv run ruff format src/ tests/ tests-integration/
 
 format-check: ## Check code formatting with ruff
-	uv run ruff format --check src/ tests/
+	uv run ruff format --check src/ tests/ tests-integration/
 
 lint: ## Lint code with ruff
-	uv run ruff check src/ tests/
+	uv run ruff check src/ tests/ tests-integration/
 
 lint-fix: ## Lint and fix code with ruff
-	uv run ruff check --fix src/ tests/
+	uv run ruff check --fix src/ tests/ tests-integration/
 
-typecheck: ## Type check with mypy
-	uv run mypy src/
+typecheck: ## Type check with ty
+	uv run ty check src/
 
 test: ## Run tests with pytest
 	uv run pytest tests/ -v
@@ -40,6 +40,23 @@ test-cov: ## Run tests with coverage
 test-e2e: ## Run end-to-end MCPB tests
 	uv run pytest e2e/ -v -s
 
+test-integration: ## Run integration tests (requires DEEPL_API_KEY)
+	@if [ -z "$${DEEPL_API_KEY}" ]; then \
+		echo "ERROR: DEEPL_API_KEY environment variable is required."; \
+		echo "  export DEEPL_API_KEY=your_key_here"; \
+		exit 1; \
+	fi
+	uv run pytest tests-integration/ -v
+
+test-integration-verbose: ## Run integration tests with full output
+	@if [ -z "$${DEEPL_API_KEY}" ]; then \
+		echo "ERROR: DEEPL_API_KEY required."; \
+		exit 1; \
+	fi
+	uv run pytest tests-integration/ -v -s
+
+test-all: test test-integration ## Run all tests (unit + integration)
+
 clean: ## Clean up artifacts
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete
@@ -49,7 +66,7 @@ clean: ## Clean up artifacts
 	find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".coverage" -exec rm -rf {} + 2>/dev/null || true
-	rm -rf bundle/ *.mcpb
+	rm -rf bundle/ *.mcpb deps/
 
 run: ## Run the MCP server
 	uv run python -m mcp_deepl.server
@@ -62,7 +79,7 @@ run-http: ## Run HTTP server with uvicorn
 
 test-http: ## Test HTTP server is running
 	@echo "Testing health endpoint..."
-	@curl -s http://localhost:8000/health | grep -q "healthy" && echo "✓ Server is healthy" || echo "✗ Server not responding"
+	@curl -s http://localhost:8000/health | grep -q "healthy" && echo "Server is healthy" || echo "Server not responding"
 
 check: format-check lint typecheck test ## Run all checks
 

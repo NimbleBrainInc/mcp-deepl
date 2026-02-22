@@ -1,6 +1,7 @@
 """FastMCP server for DeepL Translation API."""
 
 import os
+from importlib.resources import files
 from typing import Any
 
 from dotenv import load_dotenv
@@ -24,7 +25,23 @@ from .api_models import (
 load_dotenv()
 
 # Create MCP server
-mcp = FastMCP("DeepL")
+mcp = FastMCP(
+    "DeepL",
+    instructions=(
+        "Before using DeepL tools, read the skill://deepl/usage resource "
+        "for tool selection guidance and language code conventions."
+    ),
+)
+
+# Load skill content from package data
+SKILL_CONTENT = files("mcp_deepl").joinpath("SKILL.md").read_text()
+
+
+@mcp.resource("skill://deepl/usage")
+def deepl_skill() -> str:
+    """How to effectively use DeepL tools: tool selection, language codes, glossary workflow."""
+    return SKILL_CONTENT
+
 
 # Global client instance
 _client: DeepLClient | None = None
