@@ -41,6 +41,9 @@ Thumbs.db
 # MCP/Claude
 .claude/
 
+# Dependencies (bundled by mcpb-pack)
+deps/
+
 # Package managers
 uv.lock
 .uv/
