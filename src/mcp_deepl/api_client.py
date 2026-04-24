@@ -7,10 +7,12 @@ import deepl
 
 from .api_models import (
     DocumentDownloadResponse,
+    DocumentStatus,
     DocumentStatusResponse,
     DocumentUploadResponse,
     GlossariesResponse,
     Glossary,
+    Language,
     LanguageDetectionResponse,
     LanguagesResponse,
     Translation,
@@ -189,15 +191,15 @@ class DeepLClient:
                 langs = self._translator.get_target_languages()
 
             languages = [
-                {
-                    "language": lang.code,
-                    "name": lang.name,
-                    "supports_formality": getattr(lang, "supports_formality", None),
-                }
+                Language(
+                    language=lang.code,
+                    name=lang.name,
+                    supports_formality=getattr(lang, "supports_formality", None),
+                )
                 for lang in langs
             ]
 
-            return LanguagesResponse(languages=languages)  # type: ignore[arg-type]
+            return LanguagesResponse(languages=languages)
 
         except deepl.DeepLException as e:
             raise DeepLAPIError(500, str(e)) from e
@@ -463,17 +465,18 @@ class DeepLClient:
             status = self._translator.translate_document_get_status(handle)
 
             # Map status to our enum
-            status_str = "queued"
             if status.done:
-                status_str = "done"
+                doc_status = DocumentStatus.DONE
             elif status.error_message:
-                status_str = "error"
+                doc_status = DocumentStatus.ERROR
             elif status.seconds_remaining is not None:
-                status_str = "translating"
+                doc_status = DocumentStatus.TRANSLATING
+            else:
+                doc_status = DocumentStatus.QUEUED
 
             return DocumentStatusResponse(
                 document_id=document_id,
-                status=status_str,  # type: ignore[arg-type]
+                status=doc_status,
                 seconds_remaining=status.seconds_remaining,
                 billed_characters=status.billed_characters,
                 error_message=str(status.error_message) if status.error_message else None,
