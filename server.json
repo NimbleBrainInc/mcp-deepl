@@ -2,7 +2,7 @@
   "$schema": "https://schemas.nimblebrain.ai/v1/nimblebrain-server.schema.json",
   "name": "ai.nimblebrain/deepl",
   "description": "DeepL translation API with comprehensive translation tools",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "title": "DeepL MCP Server",
   "repository": {
     "url": "https://github.com/NimbleBrainInc/mcp-deepl",

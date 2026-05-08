@@ -1,12 +1,13 @@
 {
   "manifest_version": "0.4",
   "name": "@nimblebraininc/deepl",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "DeepL translation API with comprehensive translation tools",
   "author": {
     "name": "NimbleBrain Inc",
     "email": "hello@nimblebrain.ai"
   },
+  "icon": "https://static.nimblebrain.ai/icons/deepl.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/NimbleBrainInc/mcp-deepl"
