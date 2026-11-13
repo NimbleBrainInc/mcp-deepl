@@ -1,11 +1,14 @@
 """FastMCP server for DeepL Translation API."""
 
+import logging
 import os
+import sys
 from importlib.resources import files
 from typing import Any
 
 from dotenv import load_dotenv
-from fastmcp import Context, FastMCP
+from fastmcp import FastMCP
+from fastmcp.exceptions import ToolError
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -23,6 +26,16 @@ from .api_models import (
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Diagnostics go to stderr (stdout carries JSON-RPC), never to the client: MCP's logging
+# capability is deprecated as of the 2026-07-28 protocol (SEP-2577). A failure the caller
+# must see is raised as a ToolError.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    stream=sys.stderr,
+)
+logger = logging.getLogger("mcp_deepl")
 
 # Create MCP server
 mcp = FastMCP(
@@ -53,8 +66,8 @@ def get_client() -> DeepLClient:
     if _client is None:
         api_token = os.environ.get("DEEPL_API_KEY")
         if not api_token:
-            error_msg = "DEEPL_API_KEY is not set - API calls will fail"
-            raise ValueError(error_msg)
+            logger.error("DEEPL_API_KEY is not set")
+            raise ToolError("DEEPL_API_KEY environment variable is required")
         _client = DeepLClient(api_token=api_token)
     return _client
 
@@ -78,7 +91,6 @@ async def translate_text(
     preserve_formatting: bool = False,
     tag_handling: str | None = None,
     split_sentences: str = "1",
-    ctx: Context | None = None,
 ) -> TranslationResponse:
     """Translate text between languages.
 
@@ -90,7 +102,6 @@ async def translate_text(
         preserve_formatting: Preserve formatting (default: false)
         tag_handling: Tag handling mode (xml, html)
         split_sentences: Split sentences (0=none, 1=default, nonewlines=no newlines)
-        ctx: MCP context
 
     Returns:
         Translation response with translated text
@@ -107,9 +118,8 @@ async def translate_text(
             split_sentences=split_sentences,
         )
     except DeepLAPIError as e:
-        if ctx:
-            await ctx.error(f"Translation error: {e.message}")
-        raise
+        logger.warning("Translation error: %s", e.message)
+        raise ToolError(f"Translation error: {e.message}") from e
 
 
 @mcp.tool()
@@ -119,7 +129,6 @@ async def translate_with_glossary(
     glossary_id: str,
     source_lang: str | None = None,
     formality: str | None = None,
-    ctx: Context | None = None,
 ) -> TranslationResponse:
     """Translate using a custom glossary.
 
@@ -129,7 +138,6 @@ async def translate_with_glossary(
         glossary_id: Glossary ID to use
         source_lang: Source language code (optional)
         formality: Formality level
-        ctx: MCP context
 
     Returns:
         Translation response
@@ -144,9 +152,8 @@ async def translate_with_glossary(
             formality=formality,
         )
     except DeepLAPIError as e:
-        if ctx:
-            await ctx.error(f"Translation error: {e.message}")
-        raise
+        logger.warning("Translation error: %s", e.message)
+        raise ToolError(f"Translation error: {e.message}") from e
 
 
 # MCP Tools - Language Detection and Info
@@ -155,13 +162,11 @@ async def translate_with_glossary(
 @mcp.tool()
 async def detect_language(
     text: str,
-    ctx: Context | None = None,
 ) -> LanguageDetectionResponse:
     """Detect the language of text.
 
     Args:
         text: Text to detect language for
-        ctx: MCP context
 
     Returns:
         Detected language information
@@ -170,21 +175,18 @@ async def detect_language(
     try:
         return await client.detect_language(text)
     except DeepLAPIError as e:
-        if ctx:
-            await ctx.error(f"Language detection error: {e.message}")
-        raise
+        logger.warning("Language detection error: %s", e.message)
+        raise ToolError(f"Language detection error: {e.message}") from e
 
 
 @mcp.tool()
 async def list_languages(
     language_type: str = "target",
-    ctx: Context | None = None,
 ) -> LanguagesResponse:
     """List all supported source and target languages.
 
     Args:
         language_type: Type of languages to list (source or target)
-        ctx: MCP context
 
     Returns:
         List of supported languages
@@ -193,22 +195,18 @@ async def list_languages(
     try:
         return await client.list_languages(language_type)
     except DeepLAPIError as e:
-        if ctx:
-            await ctx.error(f"Error listing languages: {e.message}")
-        raise
+        logger.warning("Error listing languages: %s", e.message)
+        raise ToolError(f"Error listing languages: {e.message}") from e
 
 
 # MCP Tools - Usage
 
 
 @mcp.tool()
-async def get_usage(
-    ctx: Context | None = None,
-) -> UsageResponse:
+async def get_usage() -> UsageResponse:
     """Get API usage statistics.
 
     Args:
-        ctx: MCP context
 
     Returns:
         Usage statistics
@@ -217,22 +215,18 @@ async def get_usage(
     try:
         return await client.get_usage()
     except DeepLAPIError as e:
-        if ctx:
-            await ctx.error(f"Error getting usage: {e.message}")
-        raise
+        logger.warning("Error getting usage: %s", e.message)
+        raise ToolError(f"Error getting usage: {e.message}") from e
 
 
 # MCP Tools - Glossaries
 
 
 @mcp.tool()
-async def list_glossaries(
-    ctx: Context | None = None,
-) -> GlossariesResponse:
+async def list_glossaries() -> GlossariesResponse:
     """List custom glossaries.
 
     Args:
-        ctx: MCP context
 
     Returns:
         List of glossaries
@@ -241,9 +235,8 @@ async def list_glossaries(
     try:
         return await client.list_glossaries()
     except DeepLAPIError as e:
-        if ctx:
-            await ctx.error(f"Error listing glossaries: {e.message}")
-        raise
+        logger.warning("Error listing glossaries: %s", e.message)
+        raise ToolError(f"Error listing glossaries: {e.message}") from e
 
 
 @mcp.tool()
@@ -253,7 +246,6 @@ async def create_glossary(
     target_lang: str,
     entries: dict[str, str],
     entries_format: str = "tsv",
-    ctx: Context | None = None,
 ) -> Glossary:
     """Create a custom glossary for consistent translations.
 
@@ -263,7 +255,6 @@ async def create_glossary(
         target_lang: Target language code
         entries: Dictionary of source:target translations
         entries_format: Format (tsv or csv)
-        ctx: MCP context
 
     Returns:
         Created glossary information
@@ -278,21 +269,18 @@ async def create_glossary(
             entries_format=entries_format,
         )
     except DeepLAPIError as e:
-        if ctx:
-            await ctx.error(f"Error creating glossary: {e.message}")
-        raise
+        logger.warning("Error creating glossary: %s", e.message)
+        raise ToolError(f"Error creating glossary: {e.message}") from e
 
 
 @mcp.tool()
 async def get_glossary(
     glossary_id: str,
-    ctx: Context | None = None,
 ) -> Glossary:
     """Get glossary details.
 
     Args:
         glossary_id: Glossary ID
-        ctx: MCP context
 
     Returns:
         Glossary information
@@ -301,21 +289,18 @@ async def get_glossary(
     try:
         return await client.get_glossary(glossary_id)
     except DeepLAPIError as e:
-        if ctx:
-            await ctx.error(f"Error getting glossary: {e.message}")
-        raise
+        logger.warning("Error getting glossary: %s", e.message)
+        raise ToolError(f"Error getting glossary: {e.message}") from e
 
 
 @mcp.tool()
 async def delete_glossary(
     glossary_id: str,
-    ctx: Context | None = None,
 ) -> dict[str, Any]:
     """Delete a glossary.
 
     Args:
         glossary_id: Glossary ID
-        ctx: MCP context
 
     Returns:
         Success confirmation
@@ -324,9 +309,8 @@ async def delete_glossary(
     try:
         return await client.delete_glossary(glossary_id)
     except DeepLAPIError as e:
-        if ctx:
-            await ctx.error(f"Error deleting glossary: {e.message}")
-        raise
+        logger.warning("Error deleting glossary: %s", e.message)
+        raise ToolError(f"Error deleting glossary: {e.message}") from e
 
 
 # MCP Tools - Document Translation
@@ -339,7 +323,6 @@ async def translate_document(
     source_lang: str | None = None,
     formality: str | None = None,
     filename: str | None = None,
-    ctx: Context | None = None,
 ) -> dict[str, str]:
     """Translate entire documents (PDF, DOCX, PPTX, etc.).
 
@@ -352,16 +335,14 @@ async def translate_document(
         source_lang: Source language code (optional)
         formality: Formality level
         filename: Original filename (for proper format detection)
-        ctx: MCP context
 
     Returns:
         Document ID and key for status checking
     """
-    if ctx:
-        await ctx.warning(
-            "Document upload is a placeholder - production implementation "
-            "requires multipart form data handling"
-        )
+    logger.warning(
+        "Document upload is a placeholder - production implementation "
+        "requires multipart form data handling"
+    )
     return {
         "document_id": "placeholder_id",
         "document_key": "placeholder_key",
@@ -373,14 +354,12 @@ async def translate_document(
 async def get_document_status(
     document_id: str,
     document_key: str,
-    ctx: Context | None = None,
 ) -> DocumentStatusResponse:
     """Check document translation status.
 
     Args:
         document_id: Document ID from upload
         document_key: Document key from upload
-        ctx: MCP context
 
     Returns:
         Document status information
@@ -389,23 +368,20 @@ async def get_document_status(
     try:
         return await client.get_document_status(document_id, document_key)
     except DeepLAPIError as e:
-        if ctx:
-            await ctx.error(f"Error getting document status: {e.message}")
-        raise
+        logger.warning("Error getting document status: %s", e.message)
+        raise ToolError(f"Error getting document status: {e.message}") from e
 
 
 @mcp.tool()
 async def download_translated_document(
     document_id: str,
     document_key: str,
-    ctx: Context | None = None,
 ) -> DocumentDownloadResponse:
     """Download completed document translation.
 
     Args:
         document_id: Document ID
         document_key: Document key
-        ctx: MCP context
 
     Returns:
         Document download information
@@ -414,9 +390,8 @@ async def download_translated_document(
     try:
         return await client.download_translated_document(document_id, document_key)
     except DeepLAPIError as e:
-        if ctx:
-            await ctx.error(f"Error downloading document: {e.message}")
-        raise
+        logger.warning("Error downloading document: %s", e.message)
+        raise ToolError(f"Error downloading document: {e.message}") from e
 
 
 # Create ASGI application for deployment

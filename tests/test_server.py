@@ -47,9 +47,10 @@ class TestSkillResource:
     async def test_initialize_returns_instructions(self, mcp_server):
         """Server instructions reference the skill resource."""
         async with Client(mcp_server) as client:
-            result = await client.initialize()
-            assert result.instructions is not None
-            assert "skill://deepl/usage" in result.instructions
+            # client.instructions reads whichever negotiation result the protocol era
+            # produced; client.initialize() raises on the modern (server/discover) era.
+            assert client.instructions is not None
+            assert "skill://deepl/usage" in client.instructions
 
     @pytest.mark.asyncio
     async def test_skill_resource_listed(self, mcp_server):
@@ -90,7 +91,7 @@ class TestMCPTools:
             assert EXPECTED_TOOLS == tool_names
             for tool in tools:
                 assert tool.description
-                assert tool.inputSchema
+                assert tool.input_schema
 
     @pytest.mark.asyncio
     async def test_translate_text(self, mcp_server):
@@ -404,3 +405,34 @@ class TestMCPTools:
 
             assert result is not None
             mock_client.download_translated_document.assert_called_once_with("doc-1", "key-1")
+
+
+class TestToolErrors:
+    """Failures reach the caller as tool errors, not client log messages."""
+
+    @pytest.mark.asyncio
+    async def test_api_error_is_a_tool_error(self, mcp_server):
+        from fastmcp.exceptions import ToolError
+
+        from mcp_deepl.api_client import DeepLAPIError
+
+        with patch("mcp_deepl.server.get_client") as mock_get_client:
+            mock_client = AsyncMock()
+            mock_client.get_usage.side_effect = DeepLAPIError(456, "quota exceeded")
+            mock_get_client.return_value = mock_client
+
+            async with Client(mcp_server) as client:
+                with pytest.raises(ToolError, match="Error getting usage: quota exceeded"):
+                    await client.call_tool("get_usage", {})
+
+    @pytest.mark.asyncio
+    async def test_missing_api_key_is_a_tool_error(self, mcp_server, monkeypatch):
+        from fastmcp.exceptions import ToolError
+
+        import mcp_deepl.server as server
+
+        monkeypatch.delenv("DEEPL_API_KEY", raising=False)
+        monkeypatch.setattr(server, "_client", None)
+        async with Client(mcp_server) as client:
+            with pytest.raises(ToolError, match="DEEPL_API_KEY environment variable is required"):
+                await client.call_tool("get_usage", {})
