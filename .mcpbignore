@@ -22,6 +22,7 @@ __pycache__/
 # Test files
 /tests/
 /e2e/
+/tests-integration/
 
 # Build artifacts
 /dist/
