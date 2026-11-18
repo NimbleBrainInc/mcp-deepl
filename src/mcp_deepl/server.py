@@ -399,4 +399,4 @@ app = mcp.http_app()
 
 # Stdio entrypoint for mpak/Claude Desktop
 if __name__ == "__main__":
-    mcp.run()
+    mcp.run(show_banner=False)

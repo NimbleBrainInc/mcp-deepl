@@ -48,7 +48,7 @@ class DeepLClient:
             raise ValueError("DEEPL_API_KEY must be provided or set in environment")
 
         # Create the official DeepL translator
-        self._translator = deepl.Translator(self.api_token)
+        self._translator = deepl.Translator(self.api_token, send_platform_info=False)
 
     async def __aenter__(self) -> "DeepLClient":
         return self
